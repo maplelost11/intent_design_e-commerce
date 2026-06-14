@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>电商问答助手 · 意图体系完整设计展示</title>
+  <style>
+    :root {
+      --paper: #f6f0e7;
+      --paper-2: #fbf7f1;
+      --ink: #131313;
+      --muted: #66625d;
+      --line: #d9d1c7;
+      --accent: #b20f1f;
+      --accent-dark: #7f0b16;
+      --panel: #ffffff;
+      --panel-soft: #f2ebe1;
+      --shadow: 0 14px 32px rgba(0, 0, 0, 0.05);
+      --max-width: 1360px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.25)),
+        var(--paper);
+      font-family: "Georgia", "Times New Roman", "Songti SC", serif;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    code { font-family: Consolas, "SFMono-Regular", monospace; font-size: 0.9em; }
+
+    .page {
+      width: min(var(--max-width), calc(100vw - 32px));
+      margin: 0 auto;
+      padding-bottom: 48px;
+    }
+
+    /* ---------- Masthead ---------- */
+    .masthead {
+      border-bottom: 2px solid var(--ink);
+      padding: 18px 0 10px;
+    }
+
+    .utility {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .brand { text-align: center; }
+
+    .brand .kicker {
+      display: inline-block;
+      padding: 3px 8px;
+      margin-bottom: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2.6rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .section-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+      padding: 12px 0 4px;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .section-nav a { color: var(--muted); }
+    .section-nav a:hover { color: var(--accent); }
+
+    /* ---------- Doc shell: sticky sidebar nav + main column ---------- */
+    .doc-shell {
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+      gap: 26px;
+      align-items: start;
+      padding-top: 4px;
+    }
+
+    .doc-sidebar {
+      position: sticky;
+      top: 14px;
+      align-self: start;
+      display: grid;
+      gap: 14px;
+    }
+
+    .toc-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 14px 15px;
+    }
+
+    .toc-card h3 {
+      margin: 0 0 10px;
+      font-size: 0.82rem;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .toc-card nav,
+    .toc-subnav { display: grid; gap: 7px; }
+
+    .toc-card a,
+    .toc-subnav a {
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: #3b3732;
+    }
+    .toc-card a:hover,
+    .toc-subnav a:hover { color: var(--accent); }
+
+    .toc-subnav {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .toc-subnav a { color: var(--muted); }
+
+    .toc-note {
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .doc-main { min-width: 0; }
+    .doc-main .section:first-child { margin-top: 0; }
+
+    /* ---------- Section shell: one block per chapter ---------- */
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 22px 26px 24px;
+      margin-top: 22px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-head .eyebrow {
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 11px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(1.25rem, 2vw, 1.7rem);
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head .desc {
+      flex-basis: 100%;
+      margin: 4px 0 0;
+      font-size: 0.96rem;
+      line-height: 1.66;
+      color: #38342f;
+    }
+
+    .sub-head {
+      margin: 24px 0 12px;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .sub-head:first-of-type { margin-top: 6px; }
+
+    h3 { font-size: 1.1rem; line-height: 1.2; margin: 0 0 8px; }
+    h4 { font-size: 1rem; line-height: 1.25; margin: 0 0 6px; }
+
+    p { line-height: 1.66; }
+
+    /* ---------- Cover ---------- */
+    .cover { padding-top: 24px; padding-bottom: 26px; }
+    .cover .label {
+      display: inline-block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .cover h2 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2.6vw, 2.1rem);
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+    }
+    .cover .deck {
+      margin: 14px 0 0;
+      max-width: 880px;
+      font-size: 1rem;
+      line-height: 1.7;
+      color: #2d2a27;
+    }
+    .quote-banner {
+      margin: 18px 0 22px;
+      padding: 14px 16px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.98rem;
+      line-height: 1.6;
+    }
+    .cover-meta {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 22px 28px;
+    }
+    .cover-meta h3 {
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 8px;
+    }
+    .cover-meta ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; }
+    .cover-meta li { line-height: 1.6; color: #312f2c; }
+    .cover-meta p { margin: 0; color: #312f2c; }
+
+    /* ---------- Lightweight content rows (replace card swarm) ---------- */
+    .rows { display: grid; gap: 0; }
+    .row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 18px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+    }
+    .row:first-child { border-top: 0; }
+    .row .row-key {
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .row .row-key small {
+      display: block;
+      font-weight: 400;
+      color: var(--accent);
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+    }
+    .row .row-body { margin: 0; color: #302d29; }
+    .row .row-body p { margin: 0 0 6px; }
+    .row .row-body p:last-child { margin-bottom: 0; }
+
+    /* Two-column flow inside a single section block */
+    .cols-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 36px;
+    }
+    .cols-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px 32px;
+    }
+
+    /* Compact definition list */
+    .deflist { margin: 0; }
+    .deflist > div {
+      padding: 9px 0;
+      border-top: 1px solid var(--line);
+    }
+    .deflist > div:first-child { border-top: 0; }
+    .deflist dt {
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 3px;
+    }
+    .deflist dd { margin: 0; color: #302d29; line-height: 1.6; }
+    .deflist dd span { color: var(--muted); }
+
+    ul.clean { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+    ul.clean li { line-height: 1.62; color: #302d29; }
+
+    .lede { color: #38342f; line-height: 1.68; }
+
+    /* ---------- Code / tree blocks ---------- */
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+    .tree-block {
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      margin: 10px 0 0;
+      overflow: auto;
+    }
+    .code-block {
+      background: #111417;
+      color: #edf0f3;
+      padding: 14px 16px;
+      margin: 12px 0 0;
+      overflow: auto;
+    }
+
+    /* ---------- Table ---------- */
+    .table-wrap { overflow: auto; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+    th {
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--panel-soft);
+    }
+    tr:last-child td { border-bottom: 0; }
+
+    /* ---------- Diagram (dark) ---------- */
+    .section.dark {
+      background: #0f1316;
+      border-color: #23303a;
+      color: #f5eee5;
+    }
+    .section.dark .section-head { border-color: #2a3a45; }
+    .section.dark .section-head h2 { color: #fff4db; }
+    .section.dark .section-head .desc { color: #c7d3df; }
+    .section.dark .sub-head { color: #f6bf5e; }
+    .section.dark h3 { color: #fff4db; }
+    .section.dark p, .section.dark li { color: #c7d3df; }
+    .section.dark .row { border-color: #2a3a45; }
+    .section.dark .row .row-key { color: #fff4db; }
+    .section.dark .row .row-key small { color: #f6bf5e; }
+    .section.dark .row .row-body { color: #c7d3df; }
+    .section.dark code { color: #ffd9a0; }
+
+    /* SVG diagram frame inside dark section */
+    .svg-frame {
+      background: #12151f;
+      border: 1px solid #2a3a4a;
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 10px;
+      overflow-x: auto;
+    }
+    .svg-frame svg { display: block; max-width: 100%; height: auto; }
+    .svg-legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 0; }
+    .svg-legend .item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #aabbcc;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .svg-legend .dot { width: 12px; height: 12px; border-radius: 3px; }
+
+    /* ---------- Footer ---------- */
+    .footer {
+      margin-top: 26px;
+      padding-top: 16px;
+      border-top: 2px solid var(--ink);
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 980px) {
+      .doc-shell { grid-template-columns: 1fr; }
+      .doc-sidebar { position: static; }
+    }
+
+    @media (max-width: 820px) {
+      .cover-meta, .cols-2, .cols-3 { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; gap: 4px; }
+      .section { padding: 18px 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <div class="utility">
+        <div>Coursework Showcase</div>
+        <div>Static HTML / CSS / GitHub Pages Ready</div>
+      </div>
+      <div class="brand">
+        <div class="kicker">Intent Design Special</div>
+        <h1>电商问答助手 · 意图体系完整设计</h1>
+        <p>从意图全景枚举到 Query 改写、Prompt 设计与工程落地</p>
+      </div>
+      <nav class="section-nav">
+        <a href="#lead">封面</a>
+        <a href="#panorama">意图全景</a>
+        <a href="#case">主案例</a>
+        <a href="#prompt">Prompt</a>
+        <a href="#rewrite">改写策略</a>
+        <a href="#engineering">工程实践</a>
+        <a href="#diagrams">流程图 / 泳道图</a>
+      </nav>
+    </header>
+
+    <div class="doc-shell">
+      <aside class="doc-sidebar">
+        <div class="toc-card">
+          <h3>Overview</h3>
+          <nav>
+            <a href="#lead">项目概览</a>
+            <a href="#panorama">一、意图全景枚举</a>
+            <a href="#case">二、完整意图体系设计</a>
+            <a href="#prompt">三、意图识别 Prompt</a>
+            <a href="#rewrite">四、Query 改写策略</a>
+            <a href="#engineering">五、工程实践设计</a>
+            <a href="#diagrams">附：Flowchart 与泳道图</a>
+          </nav>
+          <div class="toc-subnav">
+            <a href="#case">2.1 意图卡片 · 2.2 意图层级</a>
+            <a href="#case">2.3 典型问题 · 2.4 槽位设计</a>
+            <a href="#case">2.5 边界定义 · 2.6 动作映射</a>
+            <a href="#rewrite">4.2 单轮改写 · 4.3 多轮改写</a>
+            <a href="#engineering">5.1 架构位置 · 5.4 Session 设计</a>
+          </div>
+        </div>
+        <div class="toc-card">
+          <h3>Reading Path</h3>
+          <div class="toc-note">
+            建议按"全景 → 主案例 → Prompt → 改写 → 工程 → 图示"的顺序浏览。导航固定在左侧，方便随时跳转。
+          </div>
+        </div>
+      </aside>
+
+      <main class="doc-main">
+    <!-- ============ Cover ============ -->
+    <section class="section cover" id="lead">
+      <span class="label">Cover Story</span>
+      <h2>把电商客服的复杂意图，设计成可识别、可澄清、可执行的系统。</h2>
+      <p class="deck">
+        本展示页包括 6 大意图全景、
+        <code>ORDER.LOGISTICS.TRACK</code> 完整示例、意图识别 Prompt、单轮与多轮 Query 改写策略、
+        分层 Fallback 工程方案，以及流程图与泳道图两张资产。
+      </p>
+      <div class="quote-banner">
+        这不是单纯的"分类任务"，而是一条从用户自然表达通向后端动作执行的中间基础设施链路。
+      </div>
+      <div class="cover-meta">
+        <div>
+          <h3>为什么展开物流追踪</h3>
+          <ul>
+            <li>在电商咨询中占比最高，行业平均 30%+。</li>
+            <li>涉及多轮对话、槽位提取、状态机跳转，复杂度足够典型。</li>
+            <li>与退换货、地址修改、投诉等意图天然交叉，最能体现边界设计能力。</li>
+          </ul>
+        </div>
+        <div>
+          <h3>系统要解决什么</h3>
+          <ul>
+            <li>识别用户真实意图，而不是只看表面关键词。</li>
+            <li>把口语、短句、代词追问改写成可检索问题。</li>
+            <li>在置信度不足时主动澄清，而不是强行猜测。</li>
+            <li>把识别结果映射到 API、RAG 或 SOP 动作。</li>
+          </ul>
+        </div>
+        <div>
+          <h3>核心意图与设计重点</h3>
+          <p>核心意图：物流追踪 <code>ORDER.LOGISTICS.TRACK</code>。<br>
+          设计重点：多轮会话、槽位补全、边界跳转、Fallback。</p>
+        </div>
+        <div>
+          <h3>风格与部署</h3>
+          <p>页面风格：杂志式排版、红色栏目标签、单块章节布局。<br>
+          部署方式：单文件 HTML，适合 GitHub Pages。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ I 意图全景 ============ -->
+    <section class="section" id="panorama">
+      <div class="section-head">
+        <span class="eyebrow">Section I / Intent Panorama</span>
+        <h2>一、意图全景枚举</h2>
+        <p class="desc">电商问答助手的用户意图按"用户决策旅程"分为 6 大类，先搭建业务地图，再深入设计单个复杂意图。</p>
+      </div>
+      <div class="rows">
+        <div class="row">
+          <div class="row-key"><small>01</small>商品咨询</div>
+          <div class="row-body"><p>商品属性查询、规格对比、选品推荐。<span style="color:var(--muted)"> — 购前信息获取。</span></p></div>
+        </div>
+        <div class="row">
+          <div class="row-key"><small>02</small>价格与促销</div>
+          <div class="row-body"><p>价格查询、优惠券 / 满减查询、比价。<span style="color:var(--muted)"> — 价格敏感型需求。</span></p></div>
+        </div>
+        <div class="row">
+          <div class="row-key"><small>03</small>订单与交易</div>
+          <div class="row-body"><p>订单状态查询、下单帮助、发票申请。<span style="color:var(--muted)"> — 交易过程支持。</span></p></div>
+        </div>
+        <div class="row">
+          <div class="row-key"><small>04</small>物流配送</div>
+          <div class="row-body"><p>物流追踪、配送时效查询、地址修改。<span style="color:var(--muted)"> — 履约环节。</span></p></div>
+        </div>
+        <div class="row">
+          <div class="row-key"><small>05</small>售后服务</div>
+          <div class="row-body"><p>退换货申请、退款进度、投诉建议。<span style="color:var(--muted)"> — 售后处理。</span></p></div>
+        </div>
+        <div class="row">
+          <div class="row-key"><small>06</small>账户与权益</div>
+          <div class="row-body"><p>积分 / 会员查询、账号问题、优惠资格。<span style="color:var(--muted)"> — 用户权益管理。</span></p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ II 主案例 ============ -->
+    <section class="section" id="case">
+      <div class="section-head">
+        <span class="eyebrow">Section II / Case Study</span>
+        <h2>二、完整意图体系设计：物流追踪</h2>
+        <p class="desc">选取 <code>ORDER.LOGISTICS.TRACK</code> 作为完整示例，输出意图卡片、层级结构、典型问题、槽位设计、边界定义与动作映射。</p>
+      </div>
+
+      <div class="sub-head">2.1 意图卡片</div>
+      <div class="rows">
+        <div class="row"><div class="row-key">意图 ID</div><div class="row-body"><p><code>ORDER.LOGISTICS.TRACK</code></p></div></div>
+        <div class="row"><div class="row-key">意图名称 / 大类</div><div class="row-body"><p>物流追踪 ｜ 所属物流配送（Logistics）</p></div></div>
+        <div class="row"><div class="row-key">描述</div><div class="row-body"><p>用户希望了解已下单商品的当前物流状态、包裹位置、预计到达时间，或某个配送节点卡住的原因。</p></div></div>
+        <div class="row"><div class="row-key">触发场景</div><div class="row-body"><p>下单后、发货后、包裹超时未到。</p></div></div>
+        <div class="row"><div class="row-key">优先级 / 情绪权重</div><div class="row-body"><p>P0（高频 + 强时效性）｜情绪中-高（超时未到时情绪较激动，需情感安抚）。</p></div></div>
+        <div class="row"><div class="row-key">改写策略</div><div class="row-body"><p>单轮扩写口语化物流词；多轮消解指代、补全订单实体。触发率预估约 65%。</p></div></div>
+        <div class="row"><div class="row-key">改写后流向</div><div class="row-body"><p><code>rewritten_query</code> 替换 <code>original_query</code> 进入 L2 向量检索；原始 query 保留用于日志分析与意图漂移检测。</p></div></div>
+        <div class="row"><div class="row-key">缓存策略</div><div class="row-body"><p>Redis TTL = 10min，按 <code>(query + last_turn)</code> hash 缓存。</p></div></div>
+      </div>
+
+      <div class="sub-head">2.2 意图层级（3 层树状结构）</div>
+      <div class="tree-block"><pre>ORDER                                   # L1 大类：订单域
+└── ORDER.LOGISTICS                     # L2 中类：物流子域
+    ├── ORDER.LOGISTICS.TRACK           # 本意图
+    │   ├── TRACK.STATUS_QUERY          # 当前状态查询
+    │   ├── TRACK.ETA_QUERY             # 预计到达时间
+    │   ├── TRACK.STUCK_QUERY           # 物流停滞 / 异常
+    │   └── TRACK.MULTI_PACKAGE         # 多包裹查询
+    ├── ORDER.LOGISTICS.ADDRESS_CHANGE  # 修改收货地址
+    └── ORDER.LOGISTICS.DELIVERY_FAIL   # 派送失败处理</pre></div>
+      <ul class="clean">
+        <li>L1 按业务域划分（Order / Product / Account）。</li>
+        <li>L2 按用户旅程阶段划分。</li>
+        <li>L3 按具体动作意图划分，粒度到可直接映射后端接口。</li>
+      </ul>
+
+      <div class="sub-head">2.3 典型问题（按子意图）</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>子意图</th><th>典型问题示例</th></tr></thead>
+          <tbody>
+            <tr><td><code>TRACK.STATUS_QUERY</code></td><td>"我的快递到哪了？" / "帮我查一下 2024120500123 的物流" / "东西发货了吗"</td></tr>
+            <tr><td><code>TRACK.ETA_QUERY</code></td><td>"快递什么时候能到？" / "明天能收到吗" / "这个周末能送到吗"</td></tr>
+            <tr><td><code>TRACK.STUCK_QUERY</code></td><td>"我的包裹 3 天没动了" / "快递显示已揽收但没更新" / "物流卡在转运中心了"</td></tr>
+            <tr><td><code>TRACK.MULTI_PACKAGE</code></td><td>"我这个订单怎么分了两个包裹" / "另一个包裹的单号是多少"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sub-head">2.4 槽位设计</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>槽位</th><th>类型</th><th>是否必填</th><th>获取方式</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>order_id</code></td><td>string</td><td>必填（优先）</td><td>用户说 / 上下文 / 账号关联</td><td>订单号</td></tr>
+            <tr><td><code>tracking_number</code></td><td>string</td><td>可选（次选）</td><td>用户说 / 系统推导</td><td>快递单号，可从 order_id 查得</td></tr>
+            <tr><td><code>sub_intent</code></td><td>enum</td><td>自动推断</td><td>NLU 识别</td><td>查状态 / ETA / 异常 / 多包裹</td></tr>
+            <tr><td><code>package_index</code></td><td>int</td><td>条件必填</td><td>用户说</td><td>多包裹时指定第几个</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sub-head">2.5 意图边界定义</div>
+      <div class="cols-2">
+        <div>
+          <h4>属于本意图</h4>
+          <ul class="clean">
+            <li>查询物流当前节点、快递员信息。</li>
+            <li>询问预计送达日期。</li>
+            <li>询问包裹滞留 / 异常原因。</li>
+            <li>查询多包裹拆单情况。</li>
+          </ul>
+        </div>
+        <div>
+          <h4>不属于本意图（需跳转）</h4>
+          <ul class="clean">
+            <li>"快递一直不来，我要退货" → <code>ORDER.AFTERSALE.RETURN</code></li>
+            <li>"快递员态度不好，我要投诉" → <code>ORDER.COMPLAINT</code></li>
+            <li>"我想改一下收货地址" → <code>ORDER.LOGISTICS.ADDRESS_CHANGE</code></li>
+            <li>"显示已签收但我没收到" → <code>ORDER.AFTERSALE.MISSING_PACKAGE</code></li>
+          </ul>
+        </div>
+      </div>
+      <ul class="clean" style="margin-top:14px;">
+        <li><strong>模糊地带：</strong>若用户先查物流，再说"不行我要退" → 在同一会话中追加 Return 意图，不重置当前意图。</li>
+        <li><strong>情绪叠加：</strong>若 query 同时含物流查询 + 催促情绪 → 识别为 <code>TRACK.STUCK_QUERY</code>，附加情感标签 <code>emotion=anxious</code>。</li>
+      </ul>
+
+      <div class="sub-head">2.6 对应承接动作（意图识别 → 槽位补全 → 动作路由）</div>
+      <ul class="clean">
+        <li><code>sub_intent=STATUS_QUERY</code> + <code>order_id</code> 已知 → 调用 <code>GET /logistics/status?order_id={}</code></li>
+        <li><code>sub_intent=ETA_QUERY</code> + 物流已揽收 → 调用 ETA 预测模型 API，返回置信区间时间。</li>
+        <li><code>sub_intent=STUCK_QUERY</code> + 停滞 &gt; 48h → 触发"物流异常处理 SOP" + 工单创建。</li>
+        <li><code>order_id</code> 未知 → 触发澄清问答："请问您的订单号是？"</li>
+        <li>识别置信度 &lt; 0.6 → 触发兜底意图 <code>FALLBACK.CLARIFY</code>。</li>
+      </ul>
+    </section>
+
+    <!-- ============ III Prompt ============ -->
+    <section class="section" id="prompt">
+      <div class="section-head">
+        <span class="eyebrow">Section III / Prompt</span>
+        <h2>三、意图识别 Prompt</h2>
+        <p class="desc">以下为可直接用于 LLM 意图分类的工程级 Prompt，兼容 GPT-4 / Qwen / Claude 这类模型。</p>
+      </div>
+      <div class="code-block"><pre>你是一个电商客服意图识别引擎。
+
+## 任务
+请对用户输入的消息进行意图识别，严格按照以下 JSON 格式输出结果，不要输出任何额外内容。
+
+## 意图类目（候选集）
+{
+  "ORDER.LOGISTICS.TRACK.STATUS_QUERY": "查询物流当前位置/状态",
+  "ORDER.LOGISTICS.TRACK.ETA_QUERY": "询问预计到达时间",
+  "ORDER.LOGISTICS.TRACK.STUCK_QUERY": "物流停滞/异常/长时间未更新",
+  "ORDER.LOGISTICS.TRACK.MULTI_PACKAGE": "查询多包裹/分包情况",
+  "ORDER.LOGISTICS.ADDRESS_CHANGE": "修改/变更收货地址",
+  "ORDER.AFTERSALE.RETURN": "申请退货退款",
+  "ORDER.AFTERSALE.MISSING_PACKAGE": "已签收但未收到包裹",
+  "ORDER.COMPLAINT": "投诉快递员或服务态度",
+  "FALLBACK.CLARIFY": "意图不明确，需要进一步澄清",
+  "FALLBACK.OUT_OF_SCOPE": "超出电商客服范畴的问题"
+}
+
+## 输出格式（严格 JSON，不加 markdown 代码块）
+{
+  "intent": "&lt;意图 ID&gt;",
+  "confidence": &lt;0.0-1.0 之间的浮点数&gt;,
+  "sub_intent_hint": "&lt;简短说明用户核心诉求，10字以内&gt;",
+  "extracted_slots": {
+    "order_id": "&lt;识别到的订单号，未提及则为 null&gt;",
+    "tracking_number": "&lt;识别到的快递单号，未提及则为 null&gt;",
+    "emotion": "&lt;neutral | anxious | angry | urgent，根据语气判断&gt;"
+  },
+  "needs_clarification": &lt;true | false&gt;,
+  "clarification_question": "&lt;若 needs_clarification=true，给出应追问用户的问题；否则为 null&gt;"
+}
+
+## 规则
+1. confidence &lt; 0.55 时，intent 必须设为 "FALLBACK.CLARIFY"
+2. 若用户同时提及多个意图（如"查物流顺便问下怎么退货"），以主意图为准，在 sub_intent_hint 中注明次要意图
+3. emotion 字段依据标点、词汇语气判断（如"还没到！！""太慢了吧"→ angry）
+4. 订单号格式参考：纯数字 10-20 位；快递单号：字母+数字混合
+5. 不要编造信息，未识别到的槽位填 null
+
+## 对话历史（若有）
+{conversation_history}
+
+## 当前用户输入
+{user_input}</pre></div>
+    </section>
+
+    <!-- ============ IV 改写策略 ============ -->
+    <section class="section" id="rewrite">
+      <div class="section-head">
+        <span class="eyebrow">Section IV / Query Rewriting</span>
+        <h2>四、Query 改写策略</h2>
+        <p class="desc"><code>用户输入 → 预处理 → [Query 改写模块] → 意图识别 → 槽位补全 → Action Router</code></p>
+      </div>
+
+      <div class="sub-head">4.1 为什么要改写</div>
+      <ul class="clean">
+        <li><strong>口语化 / 省略：</strong>"这个多少钱""还有货吗" → 缺乏上下文，向量检索发散。</li>
+        <li><strong>指代不明：</strong>"它能退吗""换一个颜色" → 代词无法匹配知识库。</li>
+        <li><strong>多意图混合：</strong>"查物流顺便问下怎么退货" → 单次检索覆盖不全。</li>
+      </ul>
+
+      <div class="sub-head">4.2 单轮改写策略</div>
+      <p class="lede"><strong>触发条件：</strong>无历史对话，或 query 长度 &lt; 12 字，或含口语化表达。<strong>改写目标：</strong>将模糊 / 口语化的物流 query 扩展为含标准属性词的完整检索句，提升向量召回率。</p>
+      <div class="table-wrap" style="margin-top:10px;">
+        <table>
+          <thead><tr><th>#</th><th>原始 Query</th><th>改写后</th><th>策略</th></tr></thead>
+          <tbody>
+            <tr><td>01</td><td>"快递到哪了"</td><td>"我的包裹当前物流位置在哪里，最新运输节点是什么"</td><td>扩写 + 标准属性词注入</td></tr>
+            <tr><td>02</td><td>"东西发货没"</td><td>"订单是否已发货，快递单号是多少，快递公司是哪家"</td><td>意图拆解扩写</td></tr>
+            <tr><td>03</td><td>"什么时候能到"</td><td>"包裹预计到达时间是什么时候，预计几天内送达"</td><td>ETA 语义扩写</td></tr>
+            <tr><td>04</td><td>"快递3天没动"</td><td>"快递物流长时间无更新，是否发生物流停滞异常，停滞原因是什么"</td><td>异常语义扩写</td></tr>
+            <tr><td>05</td><td>"分了两个包"</td><td>"订单是否拆分为多个包裹发货，各包裹的快递单号分别是什么"</td><td>多包裹语义扩写</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code-block"><pre>你是电商物流客服的 Query 改写助手。
+
+## 任务
+将用户的口语化物流查询，改写为语义完整、适合知识库检索的标准问句。
+要求：
+1. 保留原意，不改变用户意图
+2. 补全省略的物流属性词（位置/时效/状态/异常/包裹）
+3. 输出 1~2 句完整问句，不超过 60 字
+
+## 用户输入
+{user_query}
+
+## 改写结果（只输出改写句，不解释）</pre></div>
+
+      <div class="sub-head">4.3 多轮改写策略</div>
+      <p class="lede"><strong>触发条件：</strong>存在历史对话 AND（query 含代词 / query 长度 &lt; 8 字 / query 为追问句式）。<strong>核心任务：</strong>指代消解 + 省略补全。</p>
+      <div class="table-wrap" style="margin-top:10px;">
+        <table>
+          <thead><tr><th>#</th><th>历史轮</th><th>用户追问</th><th>改写后独立句</th></tr></thead>
+          <tbody>
+            <tr><td>01</td><td>"我的 2024120500123 到哪了"</td><td>"那大概几点能到"</td><td>"订单 2024120500123 的包裹预计几点可以送达"</td></tr>
+            <tr><td>02</td><td>"快递停在转运中心了"</td><td>"为什么停那么久"</td><td>"包裹停留在转运中心的原因是什么，物流停滞多久算异常"</td></tr>
+            <tr><td>03</td><td>"我买了两件商品"</td><td>"另一个包裹呢"</td><td>"订单中第二个包裹的物流状态和快递单号是什么"</td></tr>
+            <tr><td>04</td><td>"顺丰说已经到了"</td><td>"但我没收到怎么办"</td><td>"顺丰快递显示已签收但实际未收到包裹，应如何处理"</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code-block"><pre>你是电商客服多轮对话的 Query 改写引擎。
+
+## 任务
+根据【对话历史】，将用户当前的追问改写为【语义独立、无指代、可直接检索】的完整问句。
+
+## 规则
+1. 消解所有代词（它/那个/这个/另一个）
+2. 补全省略的实体（订单号/商品名/快递公司）
+3. 若追问是情绪表达（"怎么这么慢"），改写为客观问句（"物流超时的原因及处理方案"）
+4. 输出仅一句完整问句
+
+## Few-shot 示例
+历史：用户问了顺丰快递 2024120500123 的状态
+追问：它到哪了
+改写：顺丰快递单号 2024120500123 当前物流位置在哪里
+
+历史：客服告知包裹停在上海转运中心
+追问：为什么停那么久
+改写：包裹在上海转运中心停滞的原因是什么，一般停滞多久算异常
+
+## 对话历史（最近 3 轮）
+{last_3_turns}
+
+## 用户当前追问
+{current_query}
+
+## 改写结果（只输出改写句）</pre></div>
+
+      <div class="sub-head">4.4 各场景改写策略建议</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>场景</th><th>建议策略</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td>搜索框一次性提问</td><td>单轮改写</td><td>无历史轮次</td></tr>
+            <tr><td>客服对话（多轮）</td><td>多轮改写必做</td><td>大量指代、追问</td></tr>
+            <tr><td>售后追踪（追问物流）</td><td>多轮改写</td><td>"那另一个包裹呢"必须补全</td></tr>
+            <tr><td>商品比较</td><td>单轮 + 拆句</td><td>"A 和 B 哪个好" → 拆成两条检索</td></tr>
+            <tr><td>闲聊 / 打招呼</td><td>跳过改写</td><td>无需进知识库</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ V 工程实践 ============ -->
+    <section class="section" id="engineering">
+      <div class="section-head">
+        <span class="eyebrow">Section V / Engineering</span>
+        <h2>五、工程实践设计</h2>
+        <p class="desc">从 RAG Pipeline 位置、分层识别策略、改写代码、Session 结构，到监控与版本管理，完整输出工程方案。</p>
+      </div>
+
+      <div class="sub-head">5.1 架构位置与分层 Fallback</div>
+      <div class="tree-block"><pre>用户输入
+    │
+    ▼
+[预处理层]  ← 敏感词过滤、繁简转换、长句截断
+    │
+    ▼
+[Query 改写模块]  ← 单轮/多轮改写，触发条件判断
+    │
+    ▼
+[意图识别层]  ← 三层 Fallback 机制
+    │
+    ├─ 高置信度意图 (≥0.75) ────→ [槽位提取] → [Action Router] → [API调用 / RAG检索]
+    │
+    ├─ 中置信度意图 (0.55-0.75) → [澄清追问] → 等待用户补充
+    │
+    └─ 低置信度 / FALLBACK ────→ [兜底 RAG 全文检索] 或 转人工</pre></div>
+
+      <div class="sub-head">5.2 三层意图识别</div>
+      <div class="cols-3">
+        <div>
+          <h4>L1 规则引擎</h4>
+          <p>正则 + 关键词，优先级最高。超高频 query（如"快递到哪了"）走规则，延迟可控制在 5ms 内。</p>
+        </div>
+        <div>
+          <h4>L2 向量相似度匹配</h4>
+          <p>对比意图标准问题库，召回 Top-3 候选，适合规则无法穷举的中间地带。</p>
+        </div>
+        <div>
+          <h4>L3 LLM 意图分类</h4>
+          <p>当 L1 / L2 置信度不足时调用，延迟可接受在 150-300ms。L1 覆盖 60%，L2 覆盖 25%，LLM 仅处理剩余 15%。</p>
+        </div>
+      </div>
+
+      <div class="sub-head">5.3 改写器核心代码</div>
+      <div class="code-block"><pre>class QueryRewriter:
+
+    def rewrite(self, query: str, history: list[dict]) -> dict:
+        """
+        Returns:
+          rewrite_type: "skip" | "single" | "multi_turn"
+          rewritten_query: str
+          original_query: str
+        """
+        rewrite_type = self._judge_type(query, history)
+
+        if rewrite_type == "skip":
+            return {"rewrite_type": "skip", "rewritten_query": query}
+
+        if rewrite_type == "multi_turn":
+            last_turns = history[-3:]  # 只取最近3轮，控制Token
+            rewritten = self._multi_turn_rewrite(query, last_turns)
+        else:
+            rewritten = self._single_rewrite(query)
+
+        # 改写结果缓存（Redis，TTL=10min）
+        cache_key = f"rewrite:{hash(query)}:{hash(str(history[-1:]))}"
+        redis.setex(cache_key, 600, rewritten)
+
+        return {
+            "rewrite_type": rewrite_type,
+            "original_query": query,
+            "rewritten_query": rewritten
+        }
+
+    def _judge_type(self, query: str, history: list) -> str:
+        PRONOUNS = ["它", "那个", "这个", "另一个", "那里", "那边", "那家"]
+        ELLIPSIS_PATTERNS = ["呢", "怎么样", "多久", "有吗", "能吗"]
+
+        has_history = len(history) > 0
+        has_pronoun = any(p in query for p in PRONOUNS)
+        is_short    = len(query) <= 8
+        is_followup = any(query.endswith(p) for p in ELLIPSIS_PATTERNS)
+
+        if has_history and (has_pronoun or is_short or is_followup):
+            return "multi_turn"
+        if is_short or self._is_colloquial(query):
+            return "single"
+        return "skip"</pre></div>
+
+      <div class="sub-head">5.4 槽位管理与多轮 Session 设计</div>
+      <div class="code-block"><pre># 会话状态结构（存储于 Redis，TTL = 30min）
+session_state = {
+    "session_id": "uuid",
+    "current_intent": "ORDER.LOGISTICS.TRACK.STUCK_QUERY",
+    "intent_stack": [],
+    "slots": {
+        "order_id": "2024120500123",
+        "tracking_number": None,
+        "emotion": "anxious"
+    },
+    "missing_slots": ["tracking_number"],
+    "turn_count": 2,
+    "last_action": "ask_clarification"
+}</pre></div>
+      <ul class="clean">
+        <li>使用 <code>intent_stack</code> 支持意图中断与恢复。</li>
+        <li><code>emotion</code> 字段触发不同回复模板。</li>
+        <li>槽位缺失时优先用账号上下文自动填充。</li>
+      </ul>
+
+      <div class="sub-head">5.5 / 5.6 / 5.7 质量监控、版本管理与关键 Trade-off</div>
+      <ul class="clean">
+        <li><strong>意图准确率：</strong>人工抽样标注 / 自动化 A/B，低于 85% 触发迭代。</li>
+        <li><strong>Fallback 率：</strong>高于 15% 说明意图覆盖不足。</li>
+        <li><strong>槽位补全轮数：</strong>平均超过 1.5 轮说明槽位设计需优化。</li>
+        <li><strong>改写跳过率：</strong>过低说明 query 质量差，需前端优化。</li>
+        <li><strong>意图漂移检测：</strong>周级新 query 聚类分析，发现新意图簇后扩充意图树。</li>
+        <li><strong>版本管理：</strong>YAML 解耦存储 intent 配置与 Prompt 版本，支持灰度发布与 A/B 测试。</li>
+        <li><strong>Trade-off：</strong>只在必要时调 LLM；历史仅取最近 3 轮；改写后再做意图验证；Redis 缓存 TTL = 10 分钟。</li>
+      </ul>
+      <div class="code-block"><pre>version: "1.2"
+updated_at: "2026-06"
+intents:
+  - id: ORDER.LOGISTICS.TRACK
+    examples_file: "examples/logistics_track.jsonl"
+    llm_prompt_version: "v3"
+    rewrite_config:
+      single_rewrite_prompt: "prompts/single_rewrite_logistics_v2.txt"
+      multi_turn_prompt: "prompts/multi_turn_rewrite_v2.txt"
+      cache_ttl: 600
+    action_map:
+      STATUS_QUERY: "api://logistics/status"
+      STUCK_QUERY: "workflow://logistics_exception_sop"</pre></div>
+    </section>
+
+    <!-- ============ 附：流程图 ============ -->
+    <section class="section dark" id="diagrams">
+      <div class="section-head">
+        <span class="eyebrow">Appendix / Visual Assets</span>
+        <h2>附：Flowchart 与泳道图</h2>
+        <p class="desc">以下两张图作为作业展示资产完整输出，分别对应总体意图识别流程与物流追踪场景的泳道式交互过程。</p>
+      </div>
+
+      <div class="sub-head">Flowchart · 总体意图识别流程（含单 / 多轮改写模块）</div>
+      <div class="svg-legend">
+        <div class="item"><div class="dot" style="background:#1e3a5f;border:1.5px solid #4a9eff"></div>预处理 / 系统</div>
+        <div class="item"><div class="dot" style="background:#2b1e00;border:1.5px solid #ffb84a"></div>改写判断 / 意图识别</div>
+        <div class="item"><div class="dot" style="background:#0d3320;border:1.5px solid #4aff9e"></div>成功路径</div>
+        <div class="item"><div class="dot" style="background:#251830;border:1.5px solid #bf7fff"></div>槽位 / 路由</div>
+        <div class="item"><div class="dot" style="background:#3d1a1a;border:1.5px solid #ff6b6b"></div>FALLBACK</div>
+      </div>
+      <div class="svg-frame">
+<svg width="1060" height="1080" viewBox="0 0 1060 1080" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="a"  markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#778899"/></marker>
+  <marker id="ag" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4aff9e"/></marker>
+  <marker id="ar" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ff6b6b"/></marker>
+  <marker id="ay" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ffb84a"/></marker>
+  <marker id="ab" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4a9eff"/></marker>
+  <marker id="ao" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ff9955"/></marker>
+</defs>
+
+<!-- ① Pre-processing -->
+<rect x="400" y="20" width="160" height="40" rx="20" fill="#1e3a5f" stroke="#4a9eff" stroke-width="2"/>
+<text x="480" y="46" text-anchor="middle" font-size="14" fill="#e8eaf0" font-weight="bold">用户输入</text>
+<line x1="480" y1="60" x2="480" y2="88" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="350" y="88" width="260" height="40" rx="8" fill="#1e3060" stroke="#4a9eff" stroke-width="2"/>
+<text x="480" y="104" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="bold">预处理层</text>
+<text x="480" y="120" text-anchor="middle" font-size="11" fill="#aabbcc">敏感词过滤 · 繁简转换 · 长句截断</text>
+
+<!-- ② Query Rewrite Lane -->
+<line x1="480" y1="128" x2="480" y2="148" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Judge box -->
+<polygon points="480,150 590,175 480,200 370,175" fill="#2b2000" stroke="#ffb84a" stroke-width="2"/>
+<text x="480" y="171" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="bold">改写判断</text>
+<text x="480" y="185" text-anchor="middle" font-size="10" fill="#aabbcc">代词/短句/历史轮次</text>
+
+<!-- Judge → multi-turn (left) -->
+<line x1="370" y1="175" x2="215" y2="175" stroke="#ff9955" stroke-width="1.8" marker-end="url(#ao)"/>
+<text x="320" y="168" text-anchor="middle" font-size="11" fill="#ff9955">有历史+指代</text>
+<rect x="100" y="153" width="168" height="44" rx="8" fill="#2b1800" stroke="#ff9955" stroke-width="2"/>
+<text x="184" y="172" text-anchor="middle" font-size="12" fill="#ff9955" font-weight="bold">多轮改写</text>
+<text x="184" y="188" text-anchor="middle" font-size="10" fill="#aabbcc">指代消解 · 补全实体</text>
+
+<!-- Judge → single (right) -->
+<line x1="590" y1="175" x2="740" y2="175" stroke="#ffb84a" stroke-width="1.8" marker-end="url(#ay)"/>
+<text x="665" y="168" text-anchor="middle" font-size="11" fill="#ffb84a">短句/口语</text>
+<rect x="742" y="153" width="168" height="44" rx="8" fill="#2b2000" stroke="#ffb84a" stroke-width="2"/>
+<text x="826" y="172" text-anchor="middle" font-size="12" fill="#ffb84a" font-weight="bold">单轮改写</text>
+<text x="826" y="188" text-anchor="middle" font-size="10" fill="#aabbcc">扩写+属性词注入</text>
+
+<!-- Judge → skip (down) -->
+<line x1="480" y1="200" x2="480" y2="218" stroke="#4aff9e" stroke-width="1.8" marker-end="url(#ag)"/>
+<text x="494" y="212" font-size="11" fill="#4aff9e">完整清晰</text>
+
+<!-- Multi/Single converge into intent layer -->
+<line x1="184" y1="197" x2="184" y2="232" stroke="#ff9955" stroke-width="1.5"/>
+<line x1="184" y1="232" x2="440" y2="232" stroke="#ff9955" stroke-width="1.5" marker-end="url(#ag)"/>
+<line x1="826" y1="197" x2="826" y2="232" stroke="#ffb84a" stroke-width="1.5"/>
+<line x1="826" y1="232" x2="520" y2="232" stroke="#ffb84a" stroke-width="1.5" marker-end="url(#ag)"/>
+
+<!-- Redis cache note -->
+<rect x="870" y="158" width="172" height="34" rx="6" fill="#151520" stroke="#444466" stroke-width="1"/>
+<text x="956" y="172" text-anchor="middle" font-size="10" fill="#7799cc">缓存命中 → 跳过 LLM</text>
+<text x="956" y="185" text-anchor="middle" font-size="10" fill="#556677">Redis TTL=10min</text>
+<line x1="910" y1="175" x2="870" y2="175" stroke="#444466" stroke-width="1" stroke-dasharray="4,3"/>
+
+<!-- ③ Intent Recognition -->
+<rect x="370" y="220" width="220" height="26" rx="6" fill="#0d2010" stroke="#4aff9e" stroke-width="1"/>
+<text x="480" y="238" text-anchor="middle" font-size="11" fill="#4aff9e">改写后 query 进入意图识别</text>
+
+<!-- L1 -->
+<line x1="480" y1="246" x2="480" y2="264" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+<polygon points="480,266 575,292 480,318 385,292" fill="#2e1e00" stroke="#ffb84a" stroke-width="2"/>
+<text x="480" y="287" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="bold">L1 规则引擎</text>
+<text x="480" y="302" text-anchor="middle" font-size="10" fill="#aabbcc">正则 / 关键词</text>
+
+<!-- L1 → confirmed -->
+<line x1="575" y1="292" x2="740" y2="292" stroke="#4aff9e" stroke-width="1.8" marker-end="url(#ag)"/>
+<text x="658" y="284" text-anchor="middle" font-size="11" fill="#4aff9e">命中 ≥0.95</text>
+<rect x="742" y="271" width="168" height="42" rx="8" fill="#0d3320" stroke="#4aff9e" stroke-width="2"/>
+<text x="826" y="290" text-anchor="middle" font-size="13" fill="#4aff9e" font-weight="bold">✓ 意图确定</text>
+<text x="826" y="306" text-anchor="middle" font-size="10" fill="#aabbcc">confidence 打标</text>
+
+<!-- L1 → L2 -->
+<line x1="480" y1="318" x2="480" y2="348" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="494" y="336" font-size="11" fill="#aabbcc">未命中</text>
+<polygon points="480,350 575,376 480,402 385,376" fill="#2e1e00" stroke="#ffb84a" stroke-width="2"/>
+<text x="480" y="371" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="bold">L2 向量相似度</text>
+<text x="480" y="386" text-anchor="middle" font-size="10" fill="#aabbcc">Few-shot 匹配</text>
+
+<!-- L2 → confirmed -->
+<line x1="575" y1="376" x2="742" y2="306" stroke="#4aff9e" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ag)"/>
+<text x="665" y="350" font-size="11" fill="#4aff9e">0.75~0.95</text>
+
+<!-- L2 → L3 -->
+<line x1="480" y1="402" x2="480" y2="430" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="494" y="419" font-size="11" fill="#aabbcc">未命中</text>
+<polygon points="480,432 575,458 480,484 385,458" fill="#2e1e00" stroke="#ffb84a" stroke-width="2"/>
+<text x="480" y="453" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="bold">L3 LLM 分类</text>
+<text x="480" y="468" text-anchor="middle" font-size="10" fill="#aabbcc">Prompt 推理</text>
+
+<!-- L3 → confirmed -->
+<line x1="575" y1="458" x2="742" y2="318" stroke="#4aff9e" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ag)"/>
+<text x="668" y="400" font-size="11" fill="#4aff9e">≥0.75</text>
+
+<!-- L3 → FALLBACK -->
+<line x1="385" y1="458" x2="230" y2="458" stroke="#ff6b6b" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="308" y="450" text-anchor="middle" font-size="11" fill="#ff6b6b">&lt;0.55</text>
+<rect x="100" y="436" width="148" height="44" rx="8" fill="#3d1a1a" stroke="#ff6b6b" stroke-width="2"/>
+<text x="174" y="456" text-anchor="middle" font-size="12" fill="#ff6b6b" font-weight="bold">FALLBACK</text>
+<text x="174" y="472" text-anchor="middle" font-size="10" fill="#aabbcc">兜底 / 转人工</text>
+
+<!-- confirmed → slot check -->
+<line x1="826" y1="313" x2="826" y2="480" stroke="#778899" stroke-width="1.5"/>
+<line x1="826" y1="480" x2="620" y2="510" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+<line x1="480" y1="484" x2="480" y2="510" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- ④ Slot -->
+<polygon points="540,512 640,540 540,568 440,540" fill="#251830" stroke="#bf7fff" stroke-width="2"/>
+<text x="540" y="535" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="bold">槽位完整？</text>
+<text x="540" y="550" text-anchor="middle" font-size="10" fill="#aabbcc">order_id / sub_intent</text>
+
+<!-- slot → ask -->
+<line x1="640" y1="540" x2="780" y2="540" stroke="#ffb84a" stroke-width="1.8" marker-end="url(#ay)"/>
+<text x="710" y="532" text-anchor="middle" font-size="11" fill="#ffb84a">缺失</text>
+<rect x="782" y="518" width="148" height="44" rx="8" fill="#2b2500" stroke="#ffb84a" stroke-width="2"/>
+<text x="856" y="538" text-anchor="middle" font-size="12" fill="#ffb84a" font-weight="bold">澄清追问</text>
+<text x="856" y="554" text-anchor="middle" font-size="10" fill="#aabbcc">等待用户补充</text>
+<path d="M 930 540 Q 970 540 970 580 Q 970 620 856 620 Q 720 620 640 574" fill="none" stroke="#ffb84a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ay)"/>
+<text x="960" y="584" font-size="10" fill="#ffb84a">用户补充</text>
+
+<!-- slot → router -->
+<line x1="540" y1="568" x2="540" y2="596" stroke="#4aff9e" stroke-width="1.8" marker-end="url(#ag)"/>
+<text x="556" y="585" font-size="11" fill="#4aff9e">完整</text>
+<rect x="400" y="598" width="280" height="44" rx="8" fill="#0d3320" stroke="#4aff9e" stroke-width="2"/>
+<text x="540" y="618" text-anchor="middle" font-size="13" fill="#4aff9e" font-weight="bold">Action Router · 路由分发</text>
+<text x="540" y="634" text-anchor="middle" font-size="10" fill="#aabbcc">按 sub_intent 分发</text>
+
+<!-- ⑤ Actions -->
+<line x1="540" y1="642" x2="170" y2="688" stroke="#4aff9e" stroke-width="1.4" marker-end="url(#ag)"/>
+<line x1="540" y1="642" x2="395" y2="688" stroke="#4aff9e" stroke-width="1.4" marker-end="url(#ag)"/>
+<line x1="540" y1="642" x2="665" y2="688" stroke="#4aff9e" stroke-width="1.4" marker-end="url(#ag)"/>
+<line x1="540" y1="642" x2="890" y2="688" stroke="#4aff9e" stroke-width="1.4" marker-end="url(#ag)"/>
+
+<rect x="76"  y="690" width="188" height="48" rx="8" fill="#0d2518" stroke="#3ddd88" stroke-width="2"/>
+<text x="170" y="710" text-anchor="middle" font-size="12" fill="#3ddd88" font-weight="bold">STATUS_QUERY</text>
+<text x="170" y="727" text-anchor="middle" font-size="10" fill="#aabbcc">物流状态 API</text>
+
+<rect x="302" y="690" width="188" height="48" rx="8" fill="#0d2518" stroke="#3ddd88" stroke-width="2"/>
+<text x="396" y="710" text-anchor="middle" font-size="12" fill="#3ddd88" font-weight="bold">ETA_QUERY</text>
+<text x="396" y="727" text-anchor="middle" font-size="10" fill="#aabbcc">ETA 预测 API</text>
+
+<rect x="570" y="690" width="190" height="48" rx="8" fill="#0d2518" stroke="#3ddd88" stroke-width="2"/>
+<text x="665" y="710" text-anchor="middle" font-size="12" fill="#3ddd88" font-weight="bold">STUCK_QUERY</text>
+<text x="665" y="727" text-anchor="middle" font-size="10" fill="#aabbcc">异常 SOP + 工单</text>
+
+<rect x="798" y="690" width="186" height="48" rx="8" fill="#0d2518" stroke="#3ddd88" stroke-width="2"/>
+<text x="891" y="710" text-anchor="middle" font-size="12" fill="#3ddd88" font-weight="bold">MULTI_PACKAGE</text>
+<text x="891" y="727" text-anchor="middle" font-size="10" fill="#aabbcc">多包裹列表查询</text>
+
+<!-- ⑥ Output -->
+<line x1="170" y1="738" x2="430" y2="806" stroke="#4aff9e" stroke-width="1.3" marker-end="url(#ag)"/>
+<line x1="396" y1="738" x2="470" y2="806" stroke="#4aff9e" stroke-width="1.3" marker-end="url(#ag)"/>
+<line x1="665" y1="738" x2="600" y2="806" stroke="#4aff9e" stroke-width="1.3" marker-end="url(#ag)"/>
+<line x1="891" y1="738" x2="640" y2="806" stroke="#4aff9e" stroke-width="1.3" marker-end="url(#ag)"/>
+<path d="M 174 480 Q 174 820 420 820" fill="none" stroke="#ff6b6b" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#ar)"/>
+
+<rect x="340" y="806" width="400" height="50" rx="8" fill="#2a1040" stroke="#bf7fff" stroke-width="2"/>
+<text x="540" y="826" text-anchor="middle" font-size="13" fill="#bf7fff" font-weight="bold">情感模板渲染</text>
+<text x="540" y="844" text-anchor="middle" font-size="10" fill="#aabbcc">根据 emotion 字段选择回复语气</text>
+
+<line x1="540" y1="856" x2="540" y2="882" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="400" y="882" width="280" height="42" rx="21" fill="#1a0830" stroke="#bf7fff" stroke-width="2"/>
+<text x="540" y="908" text-anchor="middle" font-size="14" fill="#bf7fff" font-weight="bold">回复用户</text>
+
+<line x1="540" y1="924" x2="540" y2="950" stroke="#778899" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="360" y="950" width="360" height="36" rx="8" fill="#161628" stroke="#444466" stroke-width="1.5"/>
+<text x="540" y="973" text-anchor="middle" font-size="11" fill="#7799cc">Session 写入 Redis  (TTL = 30 min)</text>
+
+<!-- original query preserved note -->
+<rect x="10" y="990" width="1040" height="26" rx="6" fill="#111820" stroke="#2a3a4a" stroke-width="1"/>
+<text x="530" y="1008" text-anchor="middle" font-size="10" fill="#556677">* 原始 query 始终保留 → 用于意图漂移检测 &amp; 改写质量日志分析</text>
+</svg>
+      </div>
+
+      <div class="sub-head">Sequence Diagram · 物流追踪交互时序（含单 / 多轮改写步骤）</div>
+      <div class="svg-frame">
+<svg width="1100" height="880" viewBox="0 0 1100 880" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="sa"  markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#778899"/></marker>
+  <marker id="sab" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4a9eff"/></marker>
+  <marker id="sag" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4aff9e"/></marker>
+  <marker id="say" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ffb84a"/></marker>
+  <marker id="sap" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#bf7fff"/></marker>
+  <marker id="sac" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#7799cc"/></marker>
+  <marker id="sao" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ff9955"/></marker>
+</defs>
+
+<!-- Title -->
+<text x="550" y="22" text-anchor="middle" font-size="15" fill="white" font-weight="bold">物流追踪意图 Sequence Diagram（含 Query 改写）</text>
+<text x="550" y="38" text-anchor="middle" font-size="11" fill="#556677">ORDER.LOGISTICS.TRACK.STUCK_QUERY · 多轮场景（含指代消解）</text>
+
+<!-- Participant boxes -->
+<rect x="22"  y="48" width="106" height="46" rx="7" fill="#192a3e" stroke="#4a9eff"  stroke-width="2"/>
+<text x="75"  y="76" text-anchor="middle" font-size="13" fill="#e8eaf0" font-weight="bold">用户</text>
+
+<rect x="166" y="48" width="128" height="46" rx="7" fill="#2b1800" stroke="#ff9955" stroke-width="2"/>
+<text x="230" y="69" text-anchor="middle" font-size="12" fill="#ff9955" font-weight="bold">Query 改写</text>
+<text x="230" y="85" text-anchor="middle" font-size="10" fill="#aabbcc">单轮 / 多轮</text>
+
+<rect x="321" y="48" width="128" height="46" rx="7" fill="#192e1e" stroke="#4aff9e"  stroke-width="2"/>
+<text x="385" y="76" text-anchor="middle" font-size="13" fill="#e8eaf0" font-weight="bold">预处理层</text>
+
+<rect x="466" y="48" width="128" height="46" rx="7" fill="#2e2000" stroke="#ffb84a"  stroke-width="2"/>
+<text x="530" y="76" text-anchor="middle" font-size="13" fill="#e8eaf0" font-weight="bold">意图引擎</text>
+
+<rect x="616" y="48" width="128" height="46" rx="7" fill="#251835" stroke="#bf7fff"  stroke-width="2"/>
+<text x="680" y="76" text-anchor="middle" font-size="13" fill="#e8eaf0" font-weight="bold">槽位管理</text>
+
+<rect x="766" y="48" width="128" height="46" rx="7" fill="#0d2618" stroke="#3ddd88"  stroke-width="2"/>
+<text x="830" y="76" text-anchor="middle" font-size="13" fill="#e8eaf0" font-weight="bold">Action Router</text>
+
+<rect x="942" y="48" width="120" height="46" rx="7" fill="#151528" stroke="#7799cc"  stroke-width="2"/>
+<text x="1002" y="69" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="bold">后端 API</text>
+<text x="1002" y="85" text-anchor="middle" font-size="10" fill="#aabbcc">/ Redis</text>
+
+<!-- Lifelines -->
+<line x1="75"   y1="94" x2="75"   y2="860" stroke="#223344" stroke-width="1.4" stroke-dasharray="6,4"/>
+<line x1="230"  y1="94" x2="230"  y2="860" stroke="#332800" stroke-width="1.4" stroke-dasharray="6,4"/>
+<line x1="385"  y1="94" x2="385"  y2="860" stroke="#223344" stroke-width="1.4" stroke-dasharray="6,4"/>
+<line x1="530"  y1="94" x2="530"  y2="860" stroke="#223344" stroke-width="1.4" stroke-dasharray="6,4"/>
+<line x1="680"  y1="94" x2="680"  y2="860" stroke="#223344" stroke-width="1.4" stroke-dasharray="6,4"/>
+<line x1="830"  y1="94" x2="830"  y2="860" stroke="#223344" stroke-width="1.4" stroke-dasharray="6,4"/>
+<line x1="1002" y1="94" x2="1002" y2="860" stroke="#223344" stroke-width="1.4" stroke-dasharray="6,4"/>
+
+<!-- Activation boxes -->
+<rect x="69"   y="112" width="12" height="490" rx="2" fill="#253050" stroke="#4a6090" stroke-width="1"/>
+<rect x="224"  y="112" width="12" height="200" rx="2" fill="#3a2800" stroke="#8a6020" stroke-width="1"/>
+<rect x="379"  y="112" width="12" height="120" rx="2" fill="#253050" stroke="#4a6090" stroke-width="1"/>
+<rect x="524"  y="232" width="12" height="470" rx="2" fill="#253050" stroke="#4a6090" stroke-width="1"/>
+<rect x="674"  y="352" width="12" height="310" rx="2" fill="#253050" stroke="#4a6090" stroke-width="1"/>
+<rect x="824"  y="472" width="12" height="230" rx="2" fill="#253050" stroke="#4a6090" stroke-width="1"/>
+<rect x="996"  y="522" width="12" height="190" rx="2" fill="#253050" stroke="#4a6090" stroke-width="1"/>
+
+<!-- Phase background bands -->
+<rect x="0" y="104" width="1100" height="130" rx="0" fill="#1a1800" fill-opacity="0.3"/>
+<text x="8" y="120" font-size="10" fill="#665500">改写阶段</text>
+
+<!-- ── Steps ── -->
+<line x1="81" y1="120" x2="379" y2="120" stroke="#4a9eff" stroke-width="2" marker-end="url(#sab)"/>
+<text x="230" y="113" text-anchor="middle" font-size="12" fill="#4a9eff" font-weight="bold">① 发送原始 query（口语/含指代）</text>
+
+<line x1="379" y1="158" x2="236" y2="158" stroke="#4aff9e" stroke-width="2" marker-end="url(#sag)"/>
+<text x="308" y="151" text-anchor="middle" font-size="12" fill="#4aff9e" font-weight="bold">② 清洗后文本 → 改写模块</text>
+
+<path d="M 236 188 Q 286 188 286 203 Q 286 218 236 218" fill="none" stroke="#ff9955" stroke-width="1.8" marker-end="url(#sao)"/>
+<text x="222" y="206" text-anchor="end" font-size="11" fill="#ff9955" font-weight="bold">③ 判断改写类型</text>
+
+<rect x="310" y="193" width="210" height="28" rx="5" fill="#1a1200" stroke="#665500" stroke-width="1"/>
+<text x="415" y="212" text-anchor="middle" font-size="10" fill="#998833">Redis 缓存命中？→ 直接返回改写结果</text>
+
+<path d="M 236 238 Q 286 238 286 253 Q 286 268 236 268" fill="none" stroke="#ff9955" stroke-width="1.8" marker-end="url(#sao)"/>
+<text x="302" y="256" font-size="11" fill="#ff9955" font-weight="bold">④ 多轮改写：指代消解 + 实体补全</text>
+<text x="302" y="270" font-size="10" fill="#776644">（取最近 3 轮历史，LLM temp=0）</text>
+
+<line x1="236" y1="298" x2="524" y2="298" stroke="#ff9955" stroke-width="2" marker-end="url(#sao)"/>
+<text x="380" y="290" text-anchor="middle" font-size="12" fill="#ff9955" font-weight="bold">⑤ 改写后 query → 意图引擎</text>
+<text x="380" y="309" text-anchor="middle" font-size="10" fill="#665500">（含原始 query 保留用于日志）</text>
+
+<path d="M 536 330 Q 586 330 586 345 Q 586 360 536 360" fill="none" stroke="#ffb84a" stroke-width="1.8" marker-end="url(#say)"/>
+<text x="598" y="348" font-size="11" fill="#ffb84a" font-weight="bold">⑥ L1→L2→L3 意图识别</text>
+
+<line x1="536" y1="390" x2="674" y2="390" stroke="#bf7fff" stroke-width="2" marker-end="url(#sap)"/>
+<text x="605" y="382" text-anchor="middle" font-size="12" fill="#bf7fff" font-weight="bold">⑦ 意图 + confidence 传递</text>
+
+<line x1="674" y1="428" x2="81" y2="428" stroke="#ffb84a" stroke-width="2" marker-end="url(#say)"/>
+<text x="378" y="420" text-anchor="middle" font-size="12" fill="#ffb84a" font-weight="bold">⑧ 追问缺失槽位：订单号是？</text>
+
+<line x1="81" y1="468" x2="674" y2="468" stroke="#4a9eff" stroke-width="2" marker-end="url(#sab)"/>
+<text x="378" y="460" text-anchor="middle" font-size="12" fill="#4a9eff" font-weight="bold">⑨ 补充 order_id = 2024120500123</text>
+
+<line x1="686" y1="506" x2="824" y2="506" stroke="#3ddd88" stroke-width="2" marker-end="url(#sag)"/>
+<text x="755" y="498" text-anchor="middle" font-size="12" fill="#3ddd88" font-weight="bold">⑩ 完整槽位 → 路由分发</text>
+
+<line x1="836" y1="542" x2="996" y2="542" stroke="#7799cc" stroke-width="2" marker-end="url(#sac)"/>
+<text x="916" y="534" text-anchor="middle" font-size="11" fill="#7799cc" font-weight="bold">⑪ GET /logistics/status</text>
+
+<line x1="996" y1="578" x2="836" y2="578" stroke="#778899" stroke-width="1.8" stroke-dasharray="6,3" marker-end="url(#sa)"/>
+<text x="916" y="570" text-anchor="middle" font-size="11" fill="#aabbcc" font-weight="bold">⑫ 返回物流状态 JSON</text>
+
+<line x1="824" y1="614" x2="686" y2="614" stroke="#778899" stroke-width="1.8" stroke-dasharray="6,3" marker-end="url(#sa)"/>
+<text x="755" y="606" text-anchor="middle" font-size="11" fill="#aabbcc" font-weight="bold">⑬ 结构化结果回传</text>
+
+<line x1="674" y1="650" x2="536" y2="650" stroke="#778899" stroke-width="1.8" stroke-dasharray="6,3" marker-end="url(#sa)"/>
+<text x="605" y="642" text-anchor="middle" font-size="11" fill="#aabbcc" font-weight="bold">⑭ 触发情感模板渲染</text>
+
+<line x1="536" y1="686" x2="996" y2="686" stroke="#7799cc" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#sac)"/>
+<text x="766" y="678" text-anchor="middle" font-size="11" fill="#7799cc">⑮ 写入 Session → Redis (TTL 30min)</text>
+
+<line x1="524" y1="716" x2="236" y2="716" stroke="#ff9955" stroke-width="1.4" stroke-dasharray="4,3" marker-end="url(#sao)"/>
+<text x="380" y="708" text-anchor="middle" font-size="11" fill="#ff9955">⑯ 缓存改写结果 → Redis TTL=10min</text>
+
+<line x1="524" y1="752" x2="81" y2="752" stroke="#4a9eff" stroke-width="2.2" marker-end="url(#sab)"/>
+<text x="300" y="744" text-anchor="middle" font-size="12" fill="#4a9eff" font-weight="bold">⑰ 最终回复（安抚语气 + 物流详情）</text>
+
+<!-- Footer note -->
+<text x="550" y="830" text-anchor="middle" font-size="10" fill="#445566">橙色路径 = 改写模块新增步骤 | 虚线 = 返回 / 异步写入</text>
+<text x="550" y="848" text-anchor="middle" font-size="10" fill="#445566">单轮改写场景：步骤③跳过多轮，直接执行属性词扩写后进入步骤⑤</text>
+</svg>
+      </div>
+
+      <div class="sub-head">泳道图 · 物流追踪交互时序（文字摘要）</div>
+      <div class="rows">
+        <div class="row"><div class="row-key"><small>T1</small>用户 → 改写模块</div><div class="row-body"><p>用户发起问题："我的快递 3 天没动了，为什么停那么久？"</p></div></div>
+        <div class="row"><div class="row-key"><small>T2</small>改写模块 → 预处理层</div><div class="row-body"><p>判断为多轮改写场景：既有情绪，也符合停滞追问语义，并且可能存在实体省略。</p></div></div>
+        <div class="row"><div class="row-key"><small>T3</small>预处理层 → 改写模块</div><div class="row-body"><p>返回清洗后的 query 以及最近 3 轮对话历史，供改写模块拼装完整语义。</p></div></div>
+        <div class="row"><div class="row-key"><small>T4</small>改写模块 → 意图引擎</div><div class="row-body"><p>改写结果为："物流长时间无更新，停滞原因是什么，停滞多久算异常"。</p></div></div>
+        <div class="row"><div class="row-key"><small>T5</small>意图引擎 → 槽位管理</div><div class="row-body"><p>识别得到 <code>ORDER.LOGISTICS.TRACK.STUCK_QUERY</code>，并附带 <code>emotion=anxious</code>。</p></div></div>
+        <div class="row"><div class="row-key"><small>T6</small>槽位管理 → 用户</div><div class="row-body"><p>若缺失 <code>order_id</code>，系统发起澄清追问："请问您的订单号是？"</p></div></div>
+        <div class="row"><div class="row-key"><small>T7</small>用户 → 槽位管理</div><div class="row-body"><p>用户补充订单号 <code>2024120500123</code>，系统完成核心槽位补全。</p></div></div>
+        <div class="row"><div class="row-key"><small>T8</small>槽位管理 → Action Router</div><div class="row-body"><p>槽位补全完成，路由到物流异常处理链路。</p></div></div>
+        <div class="row"><div class="row-key"><small>T9</small>Router → 后端 API / Redis</div><div class="row-body"><p>调用物流状态 API、异常 SOP 或工单创建服务，准备返回结构化处理结果。</p></div></div>
+        <div class="row"><div class="row-key"><small>T10</small>后端 → 用户</div><div class="row-body"><p>返回结果并写入 Session：<code>current_intent</code>、<code>slots</code>、<code>emotion</code>、<code>last_action</code>，Redis TTL = 30min。</p></div></div>
+      </div>
+    </section>
+
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div>File · newstatesman / intent_showcase_newstatesman.html</div>
+      <div>完整文档输出 / HTML + CSS / 适合 GitHub Pages</div>
+    </footer>
+  </div>
+</body>
+</html>
